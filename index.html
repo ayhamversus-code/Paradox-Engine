@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مُعدِّل الواقع | Paradox Engine</title>
+    <!-- خط عربي عصري وجذاب -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #070510;
+            color: #e2e8f0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* تأثير التوهج النيوني السريالي */
+        .neon-text {
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.8), 0 0 25px rgba(56, 189, 248, 0.5);
+        }
+
+        .glass-panel {
+            background: rgba(15, 12, 30, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        /* أزرار القوانين الفيزيائية */
+        .law-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .law-btn:active {
+            transform: scale(0.92);
+        }
+
+        .law-btn.active {
+            box-shadow: 0 0 20px var(--glow-color, #a855f7), inset 0 0 12px var(--glow-color, #a855f7);
+            border-color: #ffffff;
+            transform: translateY(-3px);
+        }
+
+        .law-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .law-btn:hover::after {
+            opacity: 1;
+        }
+
+        /* إطار الكانفاس المتجاوب */
+        #canvas-wrapper {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 8px;
+        }
+
+        canvas {
+            border-radius: 18px;
+            box-shadow: 0 0 40px rgba(88, 28, 135, 0.35), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            background: #0b0818;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* تأثير تشوه الشاشة عند تفعيل المفارقة */
+        @keyframes glitchPulse {
+            0% { filter: hue-rotate(0deg) contrast(100%); }
+            50% { filter: hue-rotate(25deg) contrast(115%); }
+            100% { filter: hue-rotate(0deg) contrast(100%); }
+        }
+
+        .reality-warped {
+            animation: glitchPulse 0.4s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي: معلومات المستوى، طاقة المفارقة، وأزرار التحكم -->
+    <header class="glass-panel px-4 py-2.5 flex items-center justify-between z-20 mx-2 mt-2 rounded-2xl">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <!-- أيقونة عين سريالية SVG -->
+                <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base sm:text-lg font-black tracking-wide neon-text text-white leading-tight">مُعدِّل الواقع</h1>
+                <p id="level-subtitle" class="text-xs text-purple-300 font-semibold">البُعد ١: صحوة الجاذبية</p>
+            </div>
+        </div>
+
+        <!-- عداد استقرار الواقع (الطاقة) -->
+        <div class="hidden sm:flex flex-col items-center w-48">
+            <div class="flex justify-between w-full text-xs mb-1 font-bold">
+                <span class="text-cyan-300">استقرار الزمكان</span>
+                <span id="stability-text" class="text-white">100%</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-purple-500/30 p-0.5">
+                <div id="stability-bar" class="h-full bg-gradient-to-l from-cyan-400 via-purple-500 to-pink-500 rounded-full transition-all duration-300" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <!-- أزرار الإجراءات السريعة -->
+        <div class="flex items-center gap-2">
+            <button id="sound-btn" title="الصوت" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 text-cyan-300 transition">
+                <svg id="sound-icon-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                </svg>
+                <svg id="sound-icon-off" class="w-5 h-5 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                </svg>
+            </button>
+            <button id="reset-btn" title="إعادة ضبط البُعد" class="px-3 py-2 rounded-xl bg-rose-950/70 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>إعادة</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- شريط استقرار الزمكان للهواتف -->
+    <div class="sm:hidden px-4 pt-1.5">
+        <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+            <div id="stability-bar-mobile" class="h-full bg-gradient-to-l from-cyan-400 via-purple-500 to-pink-500 transition-all duration-300" style="width: 100%"></div>
+        </div>
+    </div>
+
+    <!-- منطقة اللعب الرئيسية (Canvas) -->
+    <main id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- رسالة تلميح عائمة داخل البُعد -->
+        <div id="hint-banner" class="absolute top-5 left-1/2 -translate-x-1/2 glass-panel px-4 py-1.5 rounded-full text-xs sm:text-sm text-cyan-200 font-semibold pointer-events-none transition-opacity duration-500 text-center max-w-[90%]">
+            أنت لا تحرك العين مباشرة.. غيّر قوانين الفيزياء لتصل إلى البوابة!
+        </div>
+
+        <!-- شاشة البداية / الانتقال بين المستويات / الفوز -->
+        <div id="overlay-modal" class="absolute inset-0 bg-[#05030c]/85 backdrop-blur-md flex items-center justify-center p-4 z-30">
+            <div class="glass-panel max-w-md w-full rounded-3xl p-6 sm:p-8 text-center border border-purple-400/40 shadow-2xl transform transition-all">
+                <div id="modal-badge" class="inline-block px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 text-xs font-bold mb-3">
+                    تجربة فيزيائية سريالية
+                </div>
+                <h2 id="modal-title" class="text-2xl sm:text-3xl font-black text-white neon-text mb-3">مُعدِّل الواقع</h2>
+                <p id="modal-desc" class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+                    "العين التائهة" عالقة بين الأبعاد. لا يمكنك لمسها أو تحريكها، بل يمكنك فقط <span class="text-cyan-300 font-bold">تعديل قوانين الفيزياء</span> في الغرفة: اعكس الجاذبية، جمّد الزمن، حوّل الكتلة إلى طيف، أو اقلب اتجاه اليمين واليسار!
+                </p>
+
+                <!-- شرح سريع للأزرار في شاشة البداية -->
+                <div id="modal-rules" class="grid grid-cols-2 gap-2 text-right text-xs mb-6 bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                    <div class="flex items-center gap-2"><span class="text-purple-400 font-bold">⇅ الجاذبية:</span> سقوط لأعلى أو لأسفل</div>
+                    <div class="flex items-center gap-2"><span class="text-amber-400 font-bold">⇄ الانجراف:</span> سحب لليمين أو اليسار</div>
+                    <div class="flex items-center gap-2"><span class="text-cyan-400 font-bold">❄ الزمن:</span> تجميد الفخاخ المتحركة</div>
+                    <div class="flex items-center gap-2"><span class="text-pink-400 font-bold">👻 الطيف:</span> اختراق الجدران البنفسجية</div>
+                </div>
+
+                <button id="modal-action-btn" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-black text-base sm:text-lg shadow-lg shadow-purple-600/40 transition transform hover:scale-[1.02] active:scale-95">
+                    ابدأ تعديل الواقع
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- لوحة التحكم السفلية: أزرار قوانين الفيزياء الغريبة -->
+    <footer class="glass-panel mx-2 mb-2 p-2.5 sm:p-3 rounded-2xl z-20">
+        <div class="max-w-3xl mx-auto grid grid-cols-5 gap-1.5 sm:gap-3">
+            
+            <!-- 1. عكس الجاذبية العمودية -->
+            <button id="btn-gravity" data-law="gravity" style="--glow-color: #a855f7;" class="law-btn flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-slate-900/90 border border-purple-500/40 text-purple-200">
+                <span id="icon-gravity" class="text-lg sm:text-2xl mb-0.5 transition-transform duration-300">⬇️</span>
+                <span class="text-[11px] sm:text-xs font-extrabold">الجاذبية</span>
+                <span id="state-gravity" class="text-[10px] text-purple-400 font-semibold">للأسفل</span>
+            </button>
+
+            <!-- 2. الانجراف الأفقي (يمين / يسار) -->
+            <button id="btn-drift" data-law="drift" style="--glow-color: #f59e0b;" class="law-btn flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-slate-900/90 border border-amber-500/40 text-amber-200">
+                <span id="icon-drift" class="text-lg sm:text-2xl mb-0.5 transition-transform duration-300">➡️</span>
+                <span class="text-[11px] sm:text-xs font-extrabold">الانجراف</span>
+                <span id="state-drift" class="text-[10px] text-amber-400 font-semibold">لليمين</span>
+            </button>
+
+            <!-- 3. تجميد الزمن -->
+            <button id="btn-time" data-law="time" style="--glow-color: #06b6d4;" class="law-btn flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-200">
+                <span class="text-lg sm:text-2xl mb-0.5">⏳</span>
+                <span class="text-[11px] sm:text-xs font-extrabold">الزمن</span>
+                <span id="state-time" class="text-[10px] text-cyan-400 font-semibold">يتدفق</span>
+            </button>
+
+            <!-- 4. الحالة الطيفية (اختراق الحواجز الوهمية) -->
+            <button id="btn-phase" data-law="phase" style="--glow-color: #ec4899;" class="law-btn flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-slate-900/90 border border-pink-500/40 text-pink-200">
+                <span class="text-lg sm:text-2xl mb-0.5">👁️‍🗨️</span>
+                <span class="text-[11px] sm:text-xs font-extrabold">المادة</span>
+                <span id="state-phase" class="text-[10px] text-pink-400 font-semibold">صلبة</span>
+            </button>
+
+            <!-- 5. تغيير المقياس (تضخيم / تقليص) -->
+            <button id="btn-scale" data-law="scale" style="--glow-color: #10b981;" class="law-btn flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-emerald-200">
+                <span class="text-lg sm:text-2xl mb-0.5">🔮</span>
+                <span class="text-[11px] sm:text-xs font-extrabold">الحجم</span>
+                <span id="state-scale" class="text-[10px] text-emerald-400 font-semibold">طبيعي</span>
+            </button>
+
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * ============================================================================
+         * مُعدِّل الواقع (PARADOX ENGINE)
+         * محرك لعبة ألغاز وفيزياء سريالية مبني بالكامل بلغة JavaScript و HTML5 Canvas
+         * ============================================================================
+         */
+
+        // --- 1. نظام الصوت السريالي التوليدي (Web Audio API) ---
+        class SurrealAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // صوت تغيير قانون فيزيائي
+            playLawShift(type) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    const freqs = {
+                        gravity: [220, 440],
+                        drift: [330, 260],
+                        time: [600, 150],
+                        phase: [480, 720],
+                        scale: [180, 360]
+                    };
+                    const [f1, f2] = freqs[type] || [300, 450];
+
+                    osc.type = type === 'phase' ? 'sine' : (type === 'time' ? 'triangle' : 'sawtooth');
+                    osc.frequency.setValueAtTime(f1, now);
+                    osc.frequency.exponentialRampToValueAtTime(f2, now + 0.18);
+
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.21);
+                } catch (e) {}
+            }
+
+            // صوت ارتداد العين على الجدران
+            playBounce(intensity = 1) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(140 + intensity * 60, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.09);
+
+                    gain.gain.setValueAtTime(Math.min(0.15, intensity * 0.08), now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.11);
+                } catch (e) {}
+            }
+
+            // صوت الفوز والعبور عبر البوابة
+            playPortalWin() {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.14, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.46);
+                    });
+                } catch (e) {}
+            }
+
+            // صوت التحطم / التلاشي عند لمس فخ
+            playShatter() {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(190, now);
+                    osc.frequency.linearRampToValueAtTime(45, now + 0.35);
+
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.37);
+                } catch (e) {}
+            }
+        }
+
+        const audio = new SurrealAudio();
+
+        // --- 2. إعدادات الكانفاس والأبعاد المنطقية ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('canvas-wrapper');
+
+        // نستخدم إحداثيات منطقية ثابتة 1000x600 لضمان تطابق الفيزياء على كل الشاشات
+        const WORLD_W = 1000;
+        const WORLD_H = 600;
+
+        function resizeCanvas() {
+            const rect = wrapper.getBoundingClientRect();
+            const aspect = WORLD_W / WORLD_H;
+            let drawW = rect.width - 16;
+            let drawH = rect.height - 16;
+
+            if (drawW / drawH > aspect) {
+                drawW = drawH * aspect;
+            } else {
+                drawH = drawW / aspect;
+            }
+
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(drawW * dpr);
+            canvas.height = Math.floor(drawH * dpr);
+            canvas.style.width = `${Math.floor(drawW)}px`;
+            canvas.style.height = `${Math.floor(drawH)}px`;
+            ctx.setTransform(canvas.width / WORLD_W, 0, 0, canvas.height / WORLD_H, 0, 0);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- 3. تعريف المستويات السريالية (6 أبعاد متدرجة الصعوبة) ---
+        const LEVELS = [
+            {
+                title: "البُعد ١: صحوة الجاذبية",
+                hint: "اضغط على (الجاذبية) أو (الانجراف) لتوجيه العين نحو البوابة الخضراء المتوهجة.",
+                start: { x: 130, y: 140 },
+                portal: { x: 860, y: 140, r: 36 },
+                initialLaws: { gravity: 1, drift: 1, timeFrozen: false, phaseShift: false, miniScale: false },
+                walls: [
+                    // جدار أوسط يجبر اللاعب على عكس الجاذبية للنزول ثم الصعود
+                    { x: 340, y: 0, w: 45, h: 370, type: 'solid' },
+                    { x: 620, y: 230, w: 45, h: 370, type: 'solid' }
+                ],
+                hazards: [],
+                crystals: [
+                    { x: 362, y: 470 },
+                    { x: 642, y: 130 }
+                ]
+            },
+            {
+                title: "البُعد ٢: الحواجز الوهمية",
+                hint: "الجدران البنفسجية المتقطعة تصبح شفافة عند تفعيل زر (المادة -> طيفي)!",
+                start: { x: 120, y: 480 },
+                portal: { x: 880, y: 120, r: 36 },
+                initialLaws: { gravity: 1, drift: 1, timeFrozen: false, phaseShift: false, miniScale: false },
+                walls: [
+                    { x: 280, y: 180, w: 35, h: 420, type: 'phase' },
+                    { x: 520, y: 0, w: 35, h: 420, type: 'solid' },
+                    { x: 730, y: 200, w: 35, h: 400, type: 'phase' }
+                ],
+                hazards: [
+                    // فخ ثابت
+                    { x: 400, y: 550, w: 110, h: 25, vx: 0, vy: 0 }
+                ],
+                crystals: [
+                    { x: 410, y: 120 },
+                    { x: 640, y: 490 }
+                ]
+            },
+            {
+                title: "البُعد ٣: رقصة الزمن المجمّد",
+                hint: "الشفرات الحمراء تتحرك بسرعة! استخدم زر (الزمن) لتجميدها في مكانها والمرور بأمان.",
+                start: { x: 110, y: 300 },
+                portal: { x: 890, y: 300, r: 36 },
+                initialLaws: { gravity: 0, drift: 1, timeFrozen: false, phaseShift: false, miniScale: false },
+                walls: [
+                    { x: 250, y: 0, w: 30, h: 200, type: 'solid' },
+                    { x: 250, y: 400, w: 30, h: 200, type: 'solid' },
+                    { x: 720, y: 0, w: 30, h: 200, type: 'solid' },
+                    { x: 720, y: 400, w: 30, h: 200, type: 'solid' }
+                ],
+                hazards: [
+                    { x: 380, y: 60, w: 28, h: 170, vx: 0, vy: 220, minY: 40, maxY: 390 },
+                    { x: 580, y: 370, w: 28, h: 170, vx: 0, vy: -240, minY: 40, maxY: 390 }
+                ],
+                crystals: [
+                    { x: 495, y: 300 }
+                ]
+            },
+            {
+                title: "البُعد ٤: عنق الزجاجة المجهري",
+                hint: "الممر ضيق جداً على العين العادية.. جرّب تقليص (الحجم) إلى مجهري!",
+                start: { x: 120, y: 120 },
+                portal: { x: 880, y: 480, r: 36 },
+                initialLaws: { gravity: 1, drift: 1, timeFrozen: false, phaseShift: false, miniScale: false },
+                walls: [
+                    // جدار به فتحة ضيقة ارتفاعها 38 بكسل فقط
+                    { x: 420, y: 0, w: 45, h: 270, type: 'solid' },
+                    { x: 420, y: 312, w: 45, h: 288, type: 'solid' },
+                    // جدار طيفي بعد الفتحة
+                    { x: 680, y: 150, w: 35, h: 450, type: 'phase' }
+                ],
+                hazards: [
+                    { x: 540, y: 80, w: 120, h: 24, vx: 0, vy: 180, minY: 50, maxY: 520 }
+                ],
+                crystals: [
+                    { x: 442, y: 291 },
+                    { x: 820, y: 120 }
+                ]
+            },
+            {
+                title: "البُعد ٥: متاهة المفارقات",
+                hint: "ادمج بين تجميد الزمن، الاختراق الطيفي، وعكس الجاذبية للوصول إلى قلب المتاهة.",
+                start: { x: 100, y: 100 },
+                portal: { x: 500, y: 300, r: 36 },
+                initialLaws: { gravity: 1, drift: 1, timeFrozen: false, phaseShift: false, miniScale: false },
+                walls: [
+                    // صندوق يحيط بالبوابة في المنتصف
+                    { x: 370, y: 180, w: 260, h: 28, type: 'solid' },
+                    { x: 370, y: 392, w: 260, h: 28, type: 'solid' },
+                    { x: 370, y: 208, w: 28, h: 184, type: 'phase' },
+                    { x: 602, y: 208, w: 28, h: 184, type: 'solid' }
+                ],
+                hazards: [
+                    { x: 220, y: 60, w: 24, h: 140, vx: 0, vy: 210, minY: 30, maxY: 430 },
+                    { x: 750, y: 400, w: 24, h: 140, vx: 0, vy: -210, minY: 30, maxY: 430 },
+                    { x: 380, y: 520, w: 240, h: 24, vx: 0, vy: 0 }
+                ],
+                crystals: [
+                    { x: 150, y: 500 },
+                    { x: 850, y: 120 }
+                ]
+            },
+            {
+                title: "البُعد ٦: قلب الفوضى المطلقة",
+                hint: "الاختبار النهائي لمُعدِّل الواقع! تحكم بكل القوانين بانسجام تام.",
+                start: { x: 95, y: 500 },
+                portal: { x: 900, y: 100, r: 38 },
+                initialLaws: { gravity: -1, drift: 1, timeFrozen: false, phaseShift: false, miniScale: false },
+                walls: [
+                    { x: 240, y: 140, w: 35, h: 460, type: 'solid' },
+                    { x: 460, y: 0, w: 35, h: 380, type: 'phase' },
+                    { x: 460, y: 425, w: 35, h: 175, type: 'solid' },
+                    { x: 700, y: 180, w: 35, h: 420, type: 'phase' }
+                ],
+                hazards: [
+                    { x: 310, y: 100, w: 110, h: 24, vx: 0, vy: 230, minY: 40, maxY: 530 },
+                    { x: 540, y: 480, w: 120, h: 24, vx: 0, vy: -250, minY: 40, maxY: 530 }
+                ],
+                crystals: [
+                    { x: 360, y: 520 },
+                    { x: 477, y: 402 },
+                    { x: 830, y: 500 }
+                ]
+            }
+        ];
+
+        // --- 4. حالة اللعبة والكيانات ---
+        let currentLevelIdx = 0;
+        let gameState = 'menu'; // menu, playing, levelComplete, gameOver, victory
+        let stability = 100; // طاقة استقرار الزمكان
+        let particles = [];
+        let timeElapsed = 0;
+
+        // القوانين النشطة في العالم
+        const laws = {
+            gravity: 1,       // 1: لأسفل، -1: لأعلى
+            drift: 1,         // 1: لليمين، -1: لليسار
+            timeFrozen: false,
+            phaseShift: false,
+            miniScale: false
+        };
+
+        // الكائن الرئيسي: "العين السريالية العائمة"
+        const player = {
+            x: 130,
+            y: 140,
+            vx: 0,
+            vy: 0,
+            baseRadius: 22,
+            radius: 22,
+            trail: [],
+            eyeAngle: 0,
+            blinkTimer: 0
+        };
+
+        let activeWalls = [];
+        let activeHazards = [];
+        let activeCrystals = [];
+        let portal = { x: 860, y: 140, r: 36 };
+
+        // --- 5. تحميل وتهيئة المستوى ---
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const lvl = LEVELS[idx];
+
+            document.getElementById('level-subtitle').textContent = lvl.title;
+            const hintBanner = document.getElementById('hint-banner');
+            hintBanner.textContent = lvl.hint;
+            hintBanner.style.opacity = '1';
+
+            // إعادة ضبط اللاعب
+            player.x = lvl.start.x;
+            player.y = lvl.start.y;
+            player.vx = 0;
+            player.vy = 0;
+            player.trail = [];
+
+            // نسخ القوانين الابتدائية
+            laws.gravity = lvl.initialLaws.gravity !== 0 ? lvl.initialLaws.gravity : 1;
+            laws.drift = lvl.initialLaws.drift !== 0 ? lvl.initialLaws.drift : 1;
+            laws.timeFrozen = lvl.initialLaws.timeFrozen;
+            laws.phaseShift = lvl.initialLaws.phaseShift;
+            laws.miniScale = lvl.initialLaws.miniScale;
+
+            player.radius = laws.miniScale ? 11 : player.baseRadius;
+            stability = 100;
+
+            // نسخ العناصر
+            portal = { ...lvl.portal };
+            activeWalls = lvl.walls.map(w => ({ ...w }));
+            activeHazards = lvl.hazards.map(h => ({ ...h }));
+            activeCrystals = lvl.crystals.map(c => ({ ...c, collected: false }));
+            particles = [];
+
+            updateLawsUI();
+            updateStabilityUI();
+        }
+
+        // --- 6. تحديث واجهة أزرار القوانين ---
+        function updateLawsUI() {
+            // 1. الجاذبية
+            const btnGrav = document.getElementById('btn-gravity');
+            const iconGrav = document.getElementById('icon-gravity');
+            const stateGrav = document.getElementById('state-gravity');
+            if (laws.gravity === 1) {
+                iconGrav.textContent = '⬇️';
+                stateGrav.textContent = 'للأسفل';
+                btnGrav.classList.remove('active');
+            } else {
+                iconGrav.textContent = '⬆️';
+                stateGrav.textContent = 'معكوسة';
+                btnGrav.classList.add('active');
+            }
+
+            // 2. الانجراف الأفقي
+            const btnDrift = document.getElementById('btn-drift');
+            const iconDrift = document.getElementById('icon-drift');
+            const stateDrift = document.getElementById('state-drift');
+            if (laws.drift === 1) {
+                iconDrift.textContent = '➡️';
+                stateDrift.textContent = 'لليمين';
+                btnDrift.classList.remove('active');
+            } else {
+                iconDrift.textContent = '⬅️';
+                stateDrift.textContent = 'لليسار';
+                btnDrift.classList.add('active');
+            }
+
+            // 3. الزمن
+            const btnTime = document.getElementById('btn-time');
+            const stateTime = document.getElementById('state-time');
+            if (laws.timeFrozen) {
+                stateTime.textContent = 'مُجمَّد ❄';
+                btnTime.classList.add('active');
+            } else {
+                stateTime.textContent = 'يتدفق';
+                btnTime.classList.remove('active');
+            }
+
+            // 4. المادة (الطور الطيفي)
+            const btnPhase = document.getElementById('btn-phase');
+            const statePhase = document.getElementById('state-phase');
+            if (laws.phaseShift) {
+                statePhase.textContent = 'طيفي 👻';
+                btnPhase.classList.add('active');
+            } else {
+                statePhase.textContent = 'صلبة';
+                btnPhase.classList.remove('active');
+            }
+
+            // 5. المقياس (الحجم)
+            const btnScale = document.getElementById('btn-scale');
+            const stateScale = document.getElementById('state-scale');
+            if (laws.miniScale) {
+                stateScale.textContent = 'مجهري';
+                btnScale.classList.add('active');
+            } else {
+                stateScale.textContent = 'طبيعي';
+                btnScale.classList.remove('active');
+            }
+        }
+
+        function updateStabilityUI() {
+            const clamped = Math.max(0, Math.min(100, Math.round(stability)));
+            document.getElementById('stability-text').textContent = `${clamped}%`;
+            document.getElementById('stability-bar').style.width = `${clamped}%`;
+            document.getElementById('stability-bar-mobile').style.width = `${clamped}%`;
+        }
+
+        // --- 7. تبديل القوانين عند الضغط ---
+        function toggleLaw(lawName) {
+            if (gameState !== 'playing') return;
+
+            // استهلاك طفيف لاستقرار الزمكان عند كل تعديل للواقع
+            stability = Math.max(5, stability - 3.5);
+            updateStabilityUI();
+
+            // نبضة بصرية على الكانفاس
+            canvas.classList.remove('reality-warped');
+            void canvas.offsetWidth;
+            canvas.classList.add('reality-warped');
+
+            switch (lawName) {
+                case 'gravity':
+                    laws.gravity *= -1;
+                    break;
+                case 'drift':
+                    laws.drift *= -1;
+                    break;
+                case 'time':
+                    laws.timeFrozen = !laws.timeFrozen;
+                    break;
+                case 'phase':
+                    laws.phaseShift = !laws.phaseShift;
+                    break;
+                case 'scale':
+                    laws.miniScale = !laws.miniScale;
+                    player.radius = laws.miniScale ? 11 : player.baseRadius;
+                    break;
+            }
+
+            audio.playLawShift(lawName);
+            spawnParticles(player.x, player.y, '#c084fc', 14);
+            updateLawsUI();
+        }
+
+        // --- 8. نظام الجزيئات البصرية ---
+        function spawnParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 40 + Math.random() * 160;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.5 + Math.random() * 0.4,
+                    maxLife: 0.9,
+                    color,
+                    size: 2 + Math.random() * 4
+                });
+            }
+        }
+
+        // --- 9. الفيزياء والتصادمات ---
+        function circleRectCollision(cx, cy, cr, rx, ry, rw, rh) {
+            const closestX = Math.max(rx, Math.min(cx, rx + rw));
+            const closestY = Math.max(ry, Math.min(cy, ry + rh));
+            const dx = cx - closestX;
+            const dy = cy - closestY;
+            return (dx * dx + dy * dy) < (cr * cr);
+        }
+
+        function resolveWallCollisions() {
+            // حدود الغرفة الخارجية
+            const bounce = 0.68;
+            if (player.x - player.radius < 0) {
+                player.x = player.radius;
+                if (Math.abs(player.vx) > 60) audio.playBounce(Math.abs(player.vx) / 300);
+                player.vx = -player.vx * bounce;
+            } else if (player.x + player.radius > WORLD_W) {
+                player.x = WORLD_W - player.radius;
+                if (Math.abs(player.vx) > 60) audio.playBounce(Math.abs(player.vx) / 300);
+                player.vx = -player.vx * bounce;
+            }
+
+            if (player.y - player.radius < 0) {
+                player.y = player.radius;
+                if (Math.abs(player.vy) > 60) audio.playBounce(Math.abs(player.vy) / 300);
+                player.vy = -player.vy * bounce;
+            } else if (player.y + player.radius > WORLD_H) {
+                player.y = WORLD_H - player.radius;
+                if (Math.abs(player.vy) > 60) audio.playBounce(Math.abs(player.vy) / 300);
+                player.vy = -player.vy * bounce;
+            }
+
+            // التصادم مع الجدران الداخلية
+            for (const wall of activeWalls) {
+                // إذا كان الجدار طيفياً والمادة في الحالة الطيفية، تتجاهله العين!
+                if (wall.type === 'phase' && laws.phaseShift) continue;
+
+                if (circleRectCollision(player.x, player.y, player.radius, wall.x, wall.y, wall.w, wall.h)) {
+                    const closestX = Math.max(wall.x, Math.min(player.x, wall.x + wall.w));
+                    const closestY = Math.max(wall.y, Math.min(player.y, wall.y + wall.h));
+                    let dx = player.x - closestX;
+                    let dy = player.y - closestY;
+                    const dist = Math.hypot(dx, dy) || 0.001;
+
+                    // دفع العين خارج الجدار
+                    const overlap = player.radius - dist;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+
+                    player.x += nx * overlap;
+                    player.y += ny * overlap;
+
+                    // عكس السرعة على محور التصادم
+                    const dot = player.vx * nx + player.vy * ny;
+                    if (dot < 0) {
+                        if (Math.abs(dot) > 70) audio.playBounce(Math.abs(dot) / 300);
+                        player.vx -= (1 + bounce) * dot * nx;
+                        player.vy -= (1 + bounce) * dot * ny;
+                    }
+                }
+            }
+        }
+
+        function updatePhysics(dt) {
+            timeElapsed += dt;
+
+            // استعادة طفيفة لاستقرار الزمكان بمرور الوقت
+            if (stability < 100) {
+                stability = Math.min(100, stability + dt * 2.5);
+                updateStabilityUI();
+            }
+
+            // 1. القوى الفيزيائية المؤثرة على العين
+            const gravityForce = 560 * laws.gravity;
+            const driftForce = 340 * laws.drift;
+
+            player.vx += driftForce * dt;
+            player.vy += gravityForce * dt;
+
+            // مقاومة الهواء السريالية (تمنع التسارع اللانهائي وتجعل التحكم ممتعاً)
+            const drag = Math.pow(0.45, dt);
+            player.vx *= drag;
+            player.vy *= drag;
+
+            // تحديث موقع العين
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+
+            // تحديث زاوية بؤبؤ العين نحو اتجاه الحركة
+            if (Math.hypot(player.vx, player.vy) > 10) {
+                player.eyeAngle = Math.atan2(player.vy, player.vx);
+            }
+
+            // حفظ أثر الحركة (Trail)
+            player.trail.push({ x: player.x, y: player.y, r: player.radius });
+            if (player.trail.length > 18) player.trail.shift();
+
+            // حل التصادمات مع الجدران
+            resolveWallCollisions();
+
+            // 2. تحديث الفخاخ المتحركة (تتوقف تماماً عند تجميد الزمن!)
+            for (const h of activeHazards) {
+                if (!laws.timeFrozen) {
+                    h.x += (h.vx || 0) * dt;
+                    h.y += (h.vy || 0) * dt;
+
+                    if (h.minY !== undefined && h.y < h.minY) {
+                        h.y = h.minY;
+                        h.vy *= -1;
+                    }
+                    if (h.maxY !== undefined && h.y + h.h > h.maxY) {
+                        h.y = h.maxY - h.h;
+                        h.vy *= -1;
+                    }
+                }
+
+                // فحص اصطدام العين بالفخ
+                if (circleRectCollision(player.x, player.y, player.radius * 0.85, h.x, h.y, h.w, h.h)) {
+                    audio.playShatter();
+                    spawnParticles(player.x, player.y, '#f43f5e', 35);
+                    showModal(
+                        'تمزّق الواقع!',
+                        'لامست العين شظية زمنية حادة وتلاشت في الفراغ. أعد المحاولة وعدّل القوانين بذكاء.',
+                        'إعادة المحاولة',
+                        'تحذير زمكاني',
+                        () => loadLevel(currentLevelIdx)
+                    );
+                    return;
+                }
+            }
+
+            // 3. فحص جمع بلورات الاستقرار
+            for (const c of activeCrystals) {
+                if (!c.collected) {
+                    const dist = Math.hypot(player.x - c.x, player.y - c.y);
+                    if (dist < player.radius + 14) {
+                        c.collected = true;
+                        stability = Math.min(100, stability + 25);
+                        updateStabilityUI();
+                        audio.playLawShift('phase');
+                        spawnParticles(c.x, c.y, '#38bdf8', 20);
+                    }
+                }
+            }
+
+            // 4. فحص الوصول إلى بوابة الأبعاد
+            const distToPortal = Math.hypot(player.x - portal.x, player.y - portal.y);
+            if (distToPortal < portal.r + player.radius * 0.4) {
+                audio.playPortalWin();
+                spawnParticles(portal.x, portal.y, '#10b981', 45);
+
+                if (currentLevelIdx + 1 < LEVELS.length) {
+                    showModal(
+                        'تم اختراق البُعد بنجاح!',
+                        `لقد أعدت التوازن إلى "${LEVELS[currentLevelIdx].title}". استعد لبُعد أكثر غرابة وتعقيداً.`,
+                        'الانتقال للبُعد التالي',
+                        'مفارقة مكتملة ✨',
+                        () => loadLevel(currentLevelIdx + 1)
+                    );
+                } else {
+                    showModal(
+                        'سيد الزمكان المطلق!',
+                        'تهانينا يا جلالة الملك! لقد أخضعت جميع قوانين الفيزياء السريالية وأوصلت العين التائهة إلى بر الأمان.',
+                        'العب من البداية',
+                        'نهاية الرحلة 🏆',
+                        () => loadLevel(0)
+                    );
+                }
+            }
+
+            // 5. تحديث الجزيئات
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // --- 10. الرسم السريالي على الكانفاس ---
+        function drawBackground() {
+            // خلفية متدرجة عميقة
+            const bgGrad = ctx.createRadialGradient(WORLD_W / 2, WORLD_H / 2, 50, WORLD_W / 2, WORLD_H / 2, 650);
+            bgGrad.addColorStop(0, laws.timeFrozen ? '#081c2e' : '#150d2b');
+            bgGrad.addColorStop(1, '#06040d');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+            // شبكة الزمكان المتحركة حسب الجاذبية والانجراف
+            ctx.strokeStyle = laws.timeFrozen ? 'rgba(6, 182, 212, 0.12)' : 'rgba(168, 85, 247, 0.1)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            const offsetX = laws.timeFrozen ? 0 : (timeElapsed * 25 * laws.drift) % gridSize;
+            const offsetY = laws.timeFrozen ? 0 : (timeElapsed * 25 * laws.gravity) % gridSize;
+
+            ctx.beginPath();
+            for (let x = offsetX; x < WORLD_W; x += gridSize) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, WORLD_H);
+            }
+            for (let y = offsetY; y < WORLD_H; y += gridSize) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(WORLD_W, y);
+            }
+            ctx.stroke();
+
+            // أسهم خفيفة في الخلفية توضح اتجاه القوى الحالية
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.font = 'bold 90px Cairo';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const gravArrow = laws.gravity === 1 ? '↓' : '↑';
+            const driftArrow = laws.drift === 1 ? '→' : '←';
+            ctx.fillText(`${gravArrow} ${driftArrow}`, WORLD_W / 2, WORLD_H / 2);
+        }
+
+        function drawPortal() {
+            ctx.save();
+            ctx.translate(portal.x, portal.y);
+
+            // حلقات دوّارة للبوابة
+            for (let i = 0; i < 3; i++) {
+                ctx.save();
+                ctx.rotate(timeElapsed * (1.5 + i * 0.7) * (i % 2 === 0 ? 1 : -1));
+                ctx.strokeStyle = i === 0 ? '#10b981' : (i === 1 ? '#34d399' : '#06b6d4');
+                ctx.lineWidth = 3 - i * 0.5;
+                ctx.setLineDash([18, 10]);
+                ctx.beginPath();
+                ctx.arc(0, 0, portal.r - i * 7, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // قلب البوابة المتوهج
+            const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, portal.r);
+            glow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            glow.addColorStop(0.4, 'rgba(16, 185, 129, 0.7)');
+            glow.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, portal.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawWalls() {
+            for (const w of activeWalls) {
+                ctx.save();
+                if (w.type === 'solid') {
+                    // جدار مادي صلب
+                    const grad = ctx.createLinearGradient(w.x, w.y, w.x + w.w, w.y + w.h);
+                    grad.addColorStop(0, '#312e81');
+                    grad.addColorStop(1, '#1e1b4b');
+                    ctx.fillStyle = grad;
+                    ctx.strokeStyle = '#818cf8';
+                    ctx.lineWidth = 2;
+
+                    ctx.beginPath();
+                    ctx.roundRect(w.x, w.y, w.w, w.h, 8);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (w.type === 'phase') {
+                    // جدار طيفي (يتحول لشفاف عند تفعيل الطور الطيفي)
+                    if (laws.phaseShift) {
+                        ctx.fillStyle = 'rgba(236, 72, 153, 0.08)';
+                        ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+                        ctx.setLineDash([6, 6]);
+                    } else {
+                        ctx.fillStyle = 'rgba(236, 72, 153, 0.45)';
+                        ctx.strokeStyle = '#f472b6';
+                        ctx.setLineDash([]);
+                    }
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(w.x, w.y, w.w, w.h, 8);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function drawHazards() {
+            for (const h of activeHazards) {
+                ctx.save();
+                // إذا كان الزمن مجمّداً، تكتسي الفخاخ بطبقة جليدية زرقاء
+                if (laws.timeFrozen) {
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+                    ctx.strokeStyle = '#7dd3fc';
+                    ctx.shadowColor = '#0284c7';
+                    ctx.shadowBlur = 12;
+                } else {
+                    ctx.fillStyle = '#e11d48';
+                    ctx.strokeStyle = '#fda4af';
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.shadowBlur = 16;
+                }
+
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(h.x, h.y, h.w, h.h, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function drawCrystals() {
+            for (const c of activeCrystals) {
+                if (c.collected) continue;
+                ctx.save();
+                ctx.translate(c.x, c.y + Math.sin(timeElapsed * 4) * 5);
+                ctx.rotate(timeElapsed * 2);
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 12;
+
+                ctx.beginPath();
+                ctx.moveTo(0, -11);
+                ctx.lineTo(9, 0);
+                ctx.lineTo(0, 11);
+                ctx.lineTo(-9, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function drawPlayer() {
+            // 1. رسم الذيل الضوئي (Trail)
+            for (let i = 0; i < player.trail.length; i++) {
+                const t = player.trail[i];
+                const ratio = (i + 1) / player.trail.length;
+                ctx.fillStyle = laws.phaseShift
+                    ? `rgba(236, 72, 153, ${ratio * 0.25})`
+                    : `rgba(168, 85, 247, ${ratio * 0.25})`;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.r * ratio * 0.85, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.save();
+            ctx.translate(player.x, player.y);
+
+            // شفافية طيفية إذا كانت المادة في الوضع الطيفي
+            if (laws.phaseShift) {
+                ctx.globalAlpha = 0.65;
+            }
+
+            // 2. هالة العين الخارجية
+            const aura = ctx.createRadialGradient(0, 0, player.radius * 0.3, 0, 0, player.radius * 1.6);
+            aura.addColorStop(0, laws.phaseShift ? 'rgba(236, 72, 153, 0.6)' : 'rgba(168, 85, 247, 0.6)');
+            aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = aura;
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius * 1.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3. كرة العين البيضاء المتوهجة
+            ctx.fillStyle = '#f8fafc';
+            ctx.strokeStyle = laws.phaseShift ? '#f472b6' : '#c084fc';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 4. قزحية العين (تتحرك نحو اتجاه السرعة)
+            const lookDist = player.radius * 0.32;
+            const irisX = Math.cos(player.eyeAngle) * lookDist;
+            const irisY = Math.sin(player.eyeAngle) * lookDist;
+
+            ctx.fillStyle = laws.phaseShift ? '#db2777' : '#6d28d9';
+            ctx.beginPath();
+            ctx.arc(irisX, irisY, player.radius * 0.52, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 5. البؤبؤ الأسود ولمعة الضوء
+            ctx.fillStyle = '#090514';
+            ctx.beginPath();
+            ctx.arc(irisX, irisY, player.radius * 0.26, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(irisX - player.radius * 0.14, irisY - player.radius * 0.14, player.radius * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawParticles() {
+            for (const p of particles) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function render() {
+            drawBackground();
+            drawPortal();
+            drawWalls();
+            drawCrystals();
+            drawHazards();
+            drawParticles();
+            if (gameState === 'playing' || gameState === 'menu') {
+                drawPlayer();
+            }
+        }
+
+        // --- 11. حلقة التحديث الرئيسية ---
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000 || 0.016);
+            lastTime = timestamp;
+
+            if (gameState === 'playing') {
+                updatePhysics(dt);
+            } else {
+                timeElapsed += dt;
+            }
+
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- 12. إدارة النوافذ المنبثقة والأزرار ---
+        const modal = document.getElementById('overlay-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const modalBadge = document.getElementById('modal-badge');
+        const modalRules = document.getElementById('modal-rules');
+        const modalActionBtn = document.getElementById('modal-action-btn');
+
+        let currentModalCallback = null;
+
+        function showModal(title, desc, btnText, badgeText, callback) {
+            gameState = 'paused';
+            modalTitle.textContent = title;
+            modalDesc.textContent = desc;
+            modalActionBtn.textContent = btnText;
+            modalBadge.textContent = badgeText;
+            modalRules.classList.add('hidden');
+            currentModalCallback = callback;
+            modal.classList.remove('hidden');
+        }
+
+        modalActionBtn.addEventListener('click', () => {
+            audio.init();
+            modal.classList.add('hidden');
+            if (currentModalCallback) {
+                currentModalCallback();
+            } else {
+                loadLevel(0);
+            }
+            gameState = 'playing';
+        });
+
+        // ربط أزرار القوانين الخمسة (اللمس والماوس)
+        document.querySelectorAll('.law-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const law = btn.getAttribute('data-law');
+                toggleLaw(law);
+            });
+        });
+
+        // اختصارات لوحة المفاتيح للحاسوب
+        window.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+            switch (e.key) {
+                case '1':
+                case 'ArrowUp':
+                case 'ArrowDown':
+                case 'w':
+                case 's':
+                    toggleLaw('gravity');
+                    break;
+                case '2':
+                case 'ArrowLeft':
+                case 'ArrowRight':
+                case 'a':
+                case 'd':
+                    toggleLaw('drift');
+                    break;
+                case '3':
+                case ' ':
+                    e.preventDefault();
+                    toggleLaw('time');
+                    break;
+                case '4':
+                case 'e':
+                    toggleLaw('phase');
+                    break;
+                case '5':
+                case 'q':
+                    toggleLaw('scale');
+                    break;
+                case 'r':
+                case 'R':
+                    loadLevel(currentLevelIdx);
+                    break;
+            }
+        });
+
+        // زر إعادة المستوى
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            audio.playLawShift('time');
+            loadLevel(currentLevelIdx);
+            if (gameState !== 'playing') {
+                modal.classList.add('hidden');
+                gameState = 'playing';
+            }
+        });
+
+        // زر كتم / تشغيل الصوت
+        document.getElementById('sound-btn').addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            document.getElementById('sound-icon-on').classList.toggle('hidden', !audio.enabled);
+            document.getElementById('sound-icon-off').classList.toggle('hidden', audio.enabled);
+        });
+
+        // --- 13. بدء التشغيل عند اكتمال تحميل الصفحة ---
+        window.onload = function () {
+            resizeCanvas();
+            loadLevel(0);
+            gameState = 'menu';
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
